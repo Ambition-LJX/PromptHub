@@ -1,0 +1,208 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+enum TeamRole {
+  OWNER
+  MEMBER
+}
+
+enum Visibility {
+  PRIVATE
+  TEAM
+  SHARED
+}
+
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  email     String   @unique
+  password  String
+  role      UserRole @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  prompts           Prompt[]
+  workspaces       Workspace[]
+  projectTemplates ProjectTemplate[]
+  teamMemberships  TeamMember[]
+
+  @@index([email])
+  @@index([username])
+}
+
+model Team {
+  id          String   @id @default(uuid())
+  name        String
+  description String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members         TeamMember[]
+  promptAccesses  PromptAccess[]
+  workspaceAccesses WorkspaceAccess[]
+  projectAccesses  ProjectAccess[]
+
+  @@index([name])
+}
+
+model TeamMember {
+  id        String   @id @default(uuid())
+  userId    String
+  teamId    String
+  role      TeamRole @default(MEMBER)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, teamId])
+  @@index([teamId])
+  @@index([userId])
+}
+
+model Prompt {
+  id          String   @id @default(uuid())
+  title       String
+  content     String   @db.Text
+  description String?  @db.Text
+  language    String   @db.VarChar(255) @default("[]")
+  role        String   @db.VarChar(255) @default("[]")
+  stage       String   @db.VarChar(255) @default("[]")
+  tags        String   @db.VarChar(255) @default("[]")
+  isFavorite  Boolean  @default(false)
+  versions    String   @db.VarChar(255) @default("[]")
+  visibility  Visibility @default(PRIVATE)
+  userId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectStages    ProjectStage[]
+  workspacePrompts WorkspacePrompt[]
+  promptAccesses  PromptAccess[]
+
+  @@index([userId])
+  @@index([isFavorite])
+  @@index([updatedAt])
+  @@index([title])
+  @@index([visibility])
+}
+
+model ProjectTemplate {
+  id          String   @id @default(uuid())
+  name        String
+  description String?  @db.Text
+  stages      String   @db.VarChar(500) @default("[]")
+  visibility  Visibility @default(PRIVATE)
+  userId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectStages  ProjectStage[]
+  projectAccesses ProjectAccess[]
+
+  @@index([userId])
+  @@index([visibility])
+}
+
+model ProjectStage {
+  id               String   @id @default(uuid())
+  projectTemplate  ProjectTemplate @relation(fields: [projectTemplateId], references: [id], onDelete: Cascade)
+  projectTemplateId String
+  name             String
+  order            Int
+  promptIds        String   @db.VarChar(500) @default("[]")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  prompt        Prompt?  @relation(fields: [primaryPromptId], references: [id])
+  primaryPromptId String?
+
+  @@index([projectTemplateId])
+  @@index([order])
+}
+
+model Workspace {
+  id          String   @id @default(uuid())
+  name        String
+  description String?  @db.Text
+  visibility  Visibility @default(PRIVATE)
+  userId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspacePrompts WorkspacePrompt[]
+  workspaceAccesses WorkspaceAccess[]
+
+  @@index([userId])
+  @@index([visibility])
+}
+
+model WorkspacePrompt {
+  id          String   @id @default(uuid())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId String
+  prompt      Prompt   @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  promptId    String
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@unique([workspaceId, promptId])
+  @@index([workspaceId])
+  @@index([promptId])
+}
+
+model PromptAccess {
+  id        String   @id @default(uuid())
+  promptId  String
+  teamId    String
+  canEdit   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  prompt Prompt @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([promptId, teamId])
+  @@index([teamId])
+}
+
+model WorkspaceAccess {
+  id          String   @id @default(uuid())
+  workspaceId String
+  teamId      String
+  canEdit     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, teamId])
+  @@index([teamId])
+}
+
+model ProjectAccess {
+  id               String   @id @default(uuid())
+  projectTemplateId String
+  teamId           String
+  canEdit          Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  projectTemplate ProjectTemplate @relation(fields: [projectTemplateId], references: [id], onDelete: Cascade)
+  team             Team           @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([projectTemplateId, teamId])
+  @@index([teamId])
+}
