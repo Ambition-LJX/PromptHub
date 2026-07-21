@@ -73,8 +73,7 @@ PromptHub/
 ├── prisma/
 │   ├── schema.prisma      # 数据库模型定义
 │   ├── seed.ts            # 初始数据种子
-│   ├── migrations/        # 数据库迁移记录
-│   └── dev.db             # SQLite 开发数据库
+│   └── migrations/        # 数据库迁移记录
 ├── public/                # 静态资源
 ├── src/
 │   ├── app/               # Next.js App Router 页面
@@ -83,6 +82,7 @@ PromptHub/
 │   │   ├── projects/      # 项目模板页面
 │   │   ├── workspaces/    # 工作空间页面
 │   │   ├── teams/         # 团队管理页面
+│   │   ├── favorites/     # 收藏页面
 │   │   ├── login/         # 登录页
 │   │   └── register/      # 注册页
 │   ├── components/
@@ -95,6 +95,7 @@ PromptHub/
 │   ├── lib/               # 工具函数
 │   ├── config/            # 配置文件
 │   ├── types/             # TypeScript 类型定义
+│   ├── hooks/             # 自定义 React Hooks
 │   └── styles/            # 样式文件
 ├── .env                   # 环境变量
 ├── .env.example           # 环境变量示例
@@ -110,8 +111,6 @@ PromptHub/
 ### 环境要求
 
 - Node.js 18+
-- MySQL 8.0+ 或 SQLite（开发环境）
-- npm / yarn / pnpm
 
 ### 安装依赖
 

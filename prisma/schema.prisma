@@ -24,13 +24,17 @@ enum Visibility {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  username  String   @unique
-  email     String   @unique
-  password  String
-  role      UserRole @default(USER)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               String   @id @default(uuid())
+  username         String   @unique
+  email            String   @unique
+  password         String?  // OAuth 用户为 null
+  role             UserRole @default(USER)
+  // OAuth 关联字段
+  provider         String?  // "github" | "google" | null(本地注册)
+  providerAccountId String? // OAuth 提供商返回的用户 ID
+  image            String?  // OAuth 头像 URL
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   prompts           Prompt[]
   workspaces       Workspace[]
@@ -39,6 +43,7 @@ model User {
 
   @@index([email])
   @@index([username])
+  @@unique([provider, providerAccountId])
 }
 
 model Team {

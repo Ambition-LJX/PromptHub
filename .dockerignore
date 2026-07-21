@@ -1,0 +1,55 @@
+# 依赖目录（容器内重新安装）
+node_modules/
+
+# Next.js 构建产物
+.next/
+out/
+build/
+dist/
+
+# 本地环境变量（容器使用 compose 注入的环境变量）
+.env
+.env.local
+.env.*.local
+
+# Git
+.git/
+.gitignore
+
+# TypeScript 增量构建信息
+*.tsbuildinfo
+next-env.d.ts
+
+# 日志
+*.log
+npm-debug.log*
+
+# 编辑器/系统
+.idea/
+.vscode/
+.cursor/
+.DS_Store
+Thumbs.db
+
+# Docker 自身（避免循环 COPY）
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# 文档
+README.md
+README_RUN.md
+DOCKER.md
+AGENTS.md
+CLAUDE.md
+LICENSE
+
+# 本地数据库文件
+*.db
+*.db-shm
+*.db-wal
+prisma/*.db
+prisma/*.db-journal
+
+# 压缩包
+*.tgz

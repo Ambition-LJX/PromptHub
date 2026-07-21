@@ -1,0 +1,79 @@
+# ============================================================================
+# PromptHub Docker Compose 编排
+#   - mysql:    MySQL 8.0 数据库，数据持久化到命名卷
+#   - app:      PromptHub Next.js 应用，依赖 mysql 健康检查
+#
+# 启动:  docker compose up -d --build
+# 停止:  docker compose down
+# 查日志: docker compose logs -f app
+# 重建:  docker compose up -d --build
+# ============================================================================
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: prompthub-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root123456}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-prompt_hub}
+      MYSQL_USER: ${MYSQL_USER:-prompthub}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-prompthub123}
+      TZ: Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-authentication-plugin=caching_sha2_password
+      - --skip-name-resolve
+      # 表名不区分大小写：Prisma 迁移中存在大小写混用（ProjectAccess vs projectaccess），
+      # Linux 默认大小写敏感会导致迁移失败。必须在首次初始化时设置。
+      - --lower_case_table_names=1
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-root123456}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - prompthub-net
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: prompthub-app
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      # 使用 compose 中定义的 mysql 用户（非 root），更安全
+      DATABASE_URL: "mysql://${MYSQL_USER:-prompthub}:${MYSQL_PASSWORD:-prompthub123}@mysql:3306/${MYSQL_DATABASE:-prompt_hub}"
+      JWT_SECRET: ${JWT_SECRET:-please-change-this-jwt-secret-in-production}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      NODE_ENV: production
+      TZ: Asia/Shanghai
+      # 让 entrypoint 知道是否执行 seed（首次启动设为 true，后续可关闭）
+      RUN_SEED: ${RUN_SEED:-true}
+      # ---------- OAuth 第三方登录 ----------
+      OAUTH_CALLBACK_BASE_URL: ${OAUTH_CALLBACK_BASE_URL:-http://localhost:3000}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+      OAUTH_INSECURE_COOKIE: ${OAUTH_INSECURE_COOKIE:-false}
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    networks:
+      - prompthub-net
+
+volumes:
+  mysql_data:
+    name: prompthub-mysql-data
+
+networks:
+  prompthub-net:
+    name: prompthub-net
+    driver: bridge

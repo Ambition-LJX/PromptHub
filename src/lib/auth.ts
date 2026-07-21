@@ -35,9 +35,11 @@ export async function verifyToken(token: string): Promise<JWTPayload | null> {
 }
 
 export function setAuthCookie(response: NextResponse, token: string) {
+  const isSecure =
+    process.env.NODE_ENV === "production" && !process.env.OAUTH_INSECURE_COOKIE;
   response.cookies.set(TOKEN_COOKIE, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: isSecure,
     sameSite: "lax",
     maxAge: TOKEN_MAX_AGE,
     path: "/",
