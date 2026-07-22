@@ -21,7 +21,7 @@ import { TagInput } from "@/components/common/TagInput";
 import { CopyButton } from "@/components/common/CopyButton";
 import { PromptEditor } from "@/components/prompts/PromptEditor";
 import { LANGUAGES, ROLES, STAGES } from "@/types";
-import { formatDate } from "@/lib/utils";
+import { formatDate, extractVariables, highlightVariables } from "@/lib/utils";
 import type { Prompt } from "@/types";
 
 export default function PromptDetailPage() {
@@ -34,6 +34,7 @@ export default function PromptDetailPage() {
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
+  const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
   const [editForm, setEditForm] = useState({
     title: "",
     content: "",
@@ -105,6 +106,18 @@ export default function PromptDetailPage() {
     await fetch(`/api/prompts/${id}`, { method: "DELETE" });
     router.push("/prompts");
   };
+
+  useEffect(() => {
+    if (!editing) return;
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+        e.preventDefault();
+        if (editForm.title && editForm.content && !saving) handleSave();
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [editing, editForm.title, editForm.content, saving]);
 
   if (loading) {
     return (
@@ -300,80 +313,252 @@ export default function PromptDetailPage() {
       </Tabs>
 
       {/* Edit Dialog */}
-      <Dialog open={editing} onOpenChange={setEditing}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>编辑提示词</DialogTitle>
-            <DialogDescription>修改提示词内容和标签信息</DialogDescription>
+      <Dialog open={editing} onOpenChange={(v) => { setEditing(v); if (!v) setActiveTab("write"); }}>
+        <DialogContent className="max-w-[860px]">
+          {/* Accent top bar */}
+          <div
+            className="h-[3px] w-full rounded-b"
+            style={{
+              background: "linear-gradient(90deg, var(--accent) 0%, var(--accent-hover) 50%, var(--accent) 100%)",
+              backgroundSize: "200% 100%",
+              animation: "shimmer 3s ease-in-out infinite",
+            }}
+          />
+
+          {/* Header */}
+          <DialogHeader className="px-7 pt-5 pb-0">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3.5">
+                <div
+                  className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+                  style={{
+                    background: "linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%)",
+                    boxShadow: "0 4px 14px var(--accent-glow)",
+                  }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                  </svg>
+                </div>
+                <div>
+                  <DialogTitle className="text-[1.05rem] font-bold">编辑提示词</DialogTitle>
+                  <DialogDescription className="text-xs mt-0.5">
+                    修改提示词内容和标签分类信息
+                  </DialogDescription>
+                </div>
+              </div>
+            </div>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
-            <div>
-              <label className="text-sm font-semibold text-[var(--text-secondary)] mb-1.5 block">
-                标题 <span className="text-red-400">*</span>
-              </label>
-              <Input
-                value={editForm.title}
-                onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-              />
+          {/* Body */}
+          <div className="px-7 py-5 space-y-5 overflow-y-auto max-h-[60vh]">
+            {/* Section 1: Basic Info */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 rounded-md flex items-center justify-center" style={{ background: "var(--accent-subtle)" }}>
+                  <span className="text-[10px] font-black" style={{ color: "var(--accent)" }}>1</span>
+                </div>
+                <span className="text-xs font-bold tracking-wide uppercase" style={{ color: "var(--text-tertiary)" }}>基本信息</span>
+              </div>
+              <div className="space-y-3 pl-7">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold flex items-center gap-1" style={{ color: "var(--text-secondary)" }}>
+                    标题 <span style={{ color: "#f87171" }}>*</span>
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--text-muted)" }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                        <path d="M4 6h16M4 12h16M4 18h7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                      </svg>
+                    </span>
+                    <Input
+                      value={editForm.title}
+                      onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                      placeholder="例如：TypeScript 代码审查提示词"
+                      className="pl-9 text-sm"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold" style={{ color: "var(--text-secondary)" }}>描述</label>
+                  <Textarea
+                    value={editForm.description}
+                    onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                    placeholder="简短描述这个提示词的用途..."
+                    className="min-h-[60px] text-sm resize-none"
+                  />
+                </div>
+              </div>
             </div>
 
-            <div>
-              <label className="text-sm font-semibold text-[var(--text-secondary)] mb-1.5 block">
-                描述
-              </label>
-              <Textarea
-                value={editForm.description}
-                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                className="min-h-[60px]"
-              />
+            {/* Divider */}
+            <div className="pl-7">
+              <div className="h-px" style={{ background: "var(--border-subtle)" }} />
             </div>
 
-            <div>
-              <label className="text-sm font-semibold text-[var(--text-secondary)] mb-1.5 block">
-                内容 <span className="text-red-400">*</span>
-              </label>
-              <PromptEditor
-                value={editForm.content}
-                onChange={(v) => setEditForm({ ...editForm, content: v })}
-              />
+            {/* Section 2: Content */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 rounded-md flex items-center justify-center" style={{ background: "var(--accent-subtle)" }}>
+                  <span className="text-[10px] font-black" style={{ color: "var(--accent)" }}>2</span>
+                </div>
+                <span className="text-xs font-bold tracking-wide uppercase" style={{ color: "var(--text-tertiary)" }}>内容编辑</span>
+              </div>
+              <div className="space-y-2 pl-7">
+                <div className="flex items-center justify-between">
+                  <div className="flex rounded-lg overflow-hidden border text-xs font-semibold" style={{ borderColor: "var(--border-default)" }}>
+                    <button
+                      onClick={() => setActiveTab("write")}
+                      className="px-3 py-1.5 transition-all duration-150"
+                      style={activeTab === "write" ? { background: "var(--accent-subtle)", color: "var(--accent)" } : { color: "var(--text-muted)" }}
+                      onMouseEnter={(e) => activeTab !== "write" && (e.currentTarget.style.color = "var(--text-secondary)")}
+                      onMouseLeave={(e) => activeTab !== "write" && (e.currentTarget.style.color = "var(--text-muted)")}
+                    >
+                      编辑
+                    </button>
+                    <button
+                      onClick={() => setActiveTab("preview")}
+                      className="px-3 py-1.5 transition-all duration-150"
+                      style={activeTab === "preview" ? { background: "var(--accent-subtle)", color: "var(--accent)" } : { color: "var(--text-muted)" }}
+                      onMouseEnter={(e) => activeTab !== "preview" && (e.currentTarget.style.color = "var(--text-secondary)")}
+                      onMouseLeave={(e) => activeTab !== "preview" && (e.currentTarget.style.color = "var(--text-muted)")}
+                    >
+                      预览
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {editForm.content && activeTab === "write" && (
+                      <button
+                        onClick={() => setEditForm({ ...editForm, content: "" })}
+                        className="text-[11px] px-2 py-1 rounded-md transition-colors"
+                        style={{ color: "var(--text-muted)", background: "transparent" }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = "var(--accent-muted)"; e.currentTarget.style.color = "var(--text-secondary)"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-muted)"; }}
+                      >
+                        清空
+                      </button>
+                    )}
+                    <span className="text-[11px] tabular-nums" style={{ color: "var(--text-muted)" }}>
+                      {editForm.content.length} 字符
+                    </span>
+                  </div>
+                </div>
+
+                {activeTab === "write" ? (
+                  <div className="space-y-2">
+                    <PromptEditor
+                      value={editForm.content}
+                      onChange={(v) => setEditForm({ ...editForm, content: v })}
+                      placeholder={"输入提示词内容，可以使用 {{variable}} 作为变量占位符..."}
+                    />
+                    <p className="text-[11px]" style={{ color: "var(--text-muted)" }}>
+                      支持 {"{{variable}}"} 语法定义变量占位符
+                    </p>
+                  </div>
+                ) : (
+                  <div
+                    className="rounded-xl border min-h-[160px] p-4 overflow-auto"
+                    style={{
+                      background: "var(--surface-glass)",
+                      borderColor: "var(--border-default)",
+                      fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)",
+                      fontSize: "0.8125rem",
+                      lineHeight: "1.6",
+                    }}
+                    dangerouslySetInnerHTML={{ __html: highlightVariables(editForm.content || "<span style='color:var(--text-muted)'>预览区域...</span>") }}
+                  />
+                )}
+
+                {activeTab === "write" && editForm.content && (() => {
+                  const vars = extractVariables(editForm.content);
+                  return vars.length > 0 ? (
+                    <div className="flex flex-wrap items-center gap-1.5 p-2.5 rounded-xl" style={{ background: "var(--accent-muted)", border: "1px solid var(--border-subtle)" }}>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" style={{ color: "var(--accent)" }}>
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5" />
+                        <path d="M12 8v4m0 4h.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                      </svg>
+                      <span className="text-[11px] font-semibold" style={{ color: "var(--accent)" }}>
+                        {vars.length} 个变量
+                      </span>
+                      <div className="w-px h-3 mx-0.5" style={{ background: "var(--border-default)" }} />
+                      {vars.map((v) => (
+                        <span key={v} className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[11px] font-mono font-semibold" style={{ background: "var(--accent-subtle)", color: "var(--accent-hover)" }}>
+                          {"{{"}{v}{"}}" }
+                        </span>
+                      ))}
+                    </div>
+                  ) : null;
+                })()}
+              </div>
             </div>
 
-            <TagSelector
-              label="语言标签"
-              options={LANGUAGES}
-              value={editForm.language}
-              onChange={(v) => setEditForm({ ...editForm, language: v })}
-            />
+            {/* Divider */}
+            <div className="pl-7">
+              <div className="h-px" style={{ background: "var(--border-subtle)" }} />
+            </div>
 
-            <TagSelector
-              label="角色标签"
-              options={ROLES}
-              value={editForm.role}
-              onChange={(v) => setEditForm({ ...editForm, role: v })}
-            />
-
-            <TagSelector
-              label="开发阶段"
-              options={STAGES}
-              value={editForm.stage}
-              onChange={(v) => setEditForm({ ...editForm, stage: v })}
-            />
-
-            <TagInput
-              value={editForm.tags}
-              onChange={(v) => setEditForm({ ...editForm, tags: v })}
-              label="自定义标签"
-            />
+            {/* Section 3: Tags */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 rounded-md flex items-center justify-center" style={{ background: "var(--accent-subtle)" }}>
+                  <span className="text-[10px] font-black" style={{ color: "var(--accent)" }}>3</span>
+                </div>
+                <span className="text-xs font-bold tracking-wide uppercase" style={{ color: "var(--text-tertiary)" }}>标签分类</span>
+              </div>
+              <div className="space-y-4 pl-7">
+                <TagSelector label="语言标签" options={LANGUAGES} value={editForm.language} onChange={(v) => setEditForm({ ...editForm, language: v })} />
+                <TagSelector label="角色标签" options={ROLES} value={editForm.role} onChange={(v) => setEditForm({ ...editForm, role: v })} />
+                <TagSelector label="开发阶段" options={STAGES} value={editForm.stage} onChange={(v) => setEditForm({ ...editForm, stage: v })} />
+                <TagInput
+                  value={editForm.tags}
+                  onChange={(v) => setEditForm({ ...editForm, tags: v })}
+                  label="自定义标签"
+                />
+              </div>
+            </div>
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditing(false)}>
-              取消
-            </Button>
-            <Button onClick={handleSave} disabled={!editForm.title || !editForm.content || saving}>
-              {saving ? "保存中..." : "保存"}
-            </Button>
+          {/* Footer */}
+          <DialogFooter style={{ borderTop: "1px solid var(--border-subtle)", padding: "16px 24px", background: "var(--surface-glass)" }}>
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center gap-1.5 text-[11px]" style={{ color: "var(--text-muted)" }}>
+                <kbd className="px-1.5 py-0.5 rounded border text-[10px] font-mono" style={{ borderColor: "var(--border-default)", background: "var(--surface-elevated)" }}>
+                  Ctrl
+                </kbd>
+                <span>+</span>
+                <kbd className="px-1.5 py-0.5 rounded border text-[10px] font-mono" style={{ borderColor: "var(--border-default)", background: "var(--surface-elevated)" }}>
+                  Enter
+                </kbd>
+                <span className="ml-1">快速保存</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setEditing(false)}>
+                  取消
+                </Button>
+                <Button
+                  onClick={handleSave}
+                  disabled={!editForm.title || !editForm.content || saving}
+                  size="sm"
+                  className="min-w-[100px]"
+                >
+                  {saving ? (
+                    <span className="flex items-center gap-1.5">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style={{ animation: "spin 0.8s linear infinite" }}>
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4" strokeDashoffset="10" />
+                      </svg>
+                      保存中...
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1.5">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+                        <path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      保存修改
+                    </span>
+                  )}
+                </Button>
+              </div>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
