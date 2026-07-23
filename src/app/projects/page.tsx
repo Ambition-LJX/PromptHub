@@ -118,6 +118,20 @@ export default function ProjectsPage() {
     }
   };
 
+  const refreshSelectedProject = async () => {
+    if (!selectedProject) return;
+    try {
+      const res = await fetch(`/api/projects/${selectedProject.id}`);
+      if (res.ok) {
+        const updated = await res.json();
+        setSelectedProject(updated);
+        fetchProjects();
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   if (view === "detail" && selectedProject) {
     return (
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 page-enter">
@@ -260,7 +274,7 @@ export default function ProjectsPage() {
           </TabsList>
 
           <TabsContent value="timeline" className="mt-5">
-            <StageTimeline stages={selectedProject.stages} />
+            <StageTimeline stages={selectedProject.stages} onStageUpdate={refreshSelectedProject} />
           </TabsContent>
 
           <TabsContent value="preview" className="mt-5">

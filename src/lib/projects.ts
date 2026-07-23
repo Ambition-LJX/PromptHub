@@ -55,25 +55,40 @@ export async function getProjects(userId: string) {
     include: {
       projectStages: {
         orderBy: { order: "asc" },
-        include: { prompt: true },
       },
     },
   });
+
+  const allProjectIds = rows.map(r => r.id);
+  const allStages = rows.flatMap(r => r.projectStages);
+  const allPromptIds = [...new Set(allStages.flatMap(s => parseJsonArray(s.promptIds) as string[]))];
+  
+  const promptsMap = new Map<string, ReturnType<typeof parsePromptRow>>();
+  if (allPromptIds.length > 0) {
+    const allPrompts = await prisma.prompt.findMany({
+      where: { id: { in: allPromptIds } },
+    });
+    allPrompts.forEach(p => promptsMap.set(p.id, parsePromptRow(p)));
+  }
 
   return rows.map((r) => {
     const project = toProject(r);
     return {
       ...project,
       visibility: r.visibility,
-      stages: r.projectStages.map((s) => ({
-        id: s.id,
-        projectTemplateId: s.projectTemplateId,
-        name: s.name,
-        order: s.order,
-        promptIds: parseJsonArray(s.promptIds),
-        primaryPromptId: s.primaryPromptId,
-        prompt: s.prompt ? parsePromptRow(s.prompt) : undefined,
-      })),
+      stages: r.projectStages.map((s) => {
+        const promptIds = parseJsonArray(s.promptIds) as string[];
+        const prompts = promptIds.map(id => promptsMap.get(id)).filter(Boolean);
+        return {
+          id: s.id,
+          projectTemplateId: s.projectTemplateId,
+          name: s.name,
+          order: s.order,
+          promptIds,
+          primaryPromptId: s.primaryPromptId,
+          prompts,
+        };
+      }),
     };
   });
 }
@@ -90,7 +105,6 @@ export async function getProject(id: string, userId: string) {
     include: {
       projectStages: {
         orderBy: { order: "asc" },
-        include: { prompt: true },
       },
     },
   });
@@ -103,19 +117,32 @@ export async function getProject(id: string, userId: string) {
 
   if (!canAccess) return null;
 
+  const allPromptIds = [...new Set(raw.projectStages.flatMap(s => parseJsonArray(s.promptIds) as string[]))];
+  const promptsMap = new Map<string, ReturnType<typeof parsePromptRow>>();
+  if (allPromptIds.length > 0) {
+    const allPrompts = await prisma.prompt.findMany({
+      where: { id: { in: allPromptIds } },
+    });
+    allPrompts.forEach(p => promptsMap.set(p.id, parsePromptRow(p)));
+  }
+
   const project = toProject(raw);
   return {
     ...project,
     visibility: raw.visibility,
-    stages: raw.projectStages.map((s) => ({
-      id: s.id,
-      projectTemplateId: s.projectTemplateId,
-      name: s.name,
-      order: s.order,
-      promptIds: parseJsonArray(s.promptIds),
-      primaryPromptId: s.primaryPromptId,
-      prompt: s.prompt ? parsePromptRow(s.prompt) : undefined,
-    })),
+    stages: raw.projectStages.map((s) => {
+      const promptIds = parseJsonArray(s.promptIds) as string[];
+      const prompts = promptIds.map(pid => promptsMap.get(pid)).filter(Boolean);
+      return {
+        id: s.id,
+        projectTemplateId: s.projectTemplateId,
+        name: s.name,
+        order: s.order,
+        promptIds,
+        primaryPromptId: s.primaryPromptId,
+        prompts,
+      };
+    }),
   };
 }
 

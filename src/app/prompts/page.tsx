@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { PromptCard } from "@/components/prompts/PromptCard";
 import { TagSelector } from "@/components/common/TagSelector";
+import { SearchBar } from "@/components/common/SearchBar";
+import { FilterPanel } from "@/components/common/FilterPanel";
 import {
   Dialog,
   DialogContent,
@@ -593,7 +595,15 @@ function CreatePromptDialog({
 
 export default function PromptsPage() {
   const [prompts, setPrompts] = useState<Prompt[]>([]);
+  const [allTags, setAllTags] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [selectedLanguage, setSelectedLanguage] = useState("");
+  const [selectedRole, setSelectedRole] = useState("");
+  const [selectedStage, setSelectedStage] = useState("");
+  const [selectedTag, setSelectedTag] = useState("");
+  const [isFavoriteOnly, setIsFavoriteOnly] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showCreate, setShowCreate] = useState(false);
   const [showBulkDelete, setShowBulkDelete] = useState(false);
@@ -603,10 +613,24 @@ export default function PromptsPage() {
   const [pageSize] = useState(DEFAULT_PAGE_SIZE);
   const totalPages = Math.ceil(total / pageSize);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   const fetchPrompts = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
+      if (debouncedSearch) params.set("search", debouncedSearch);
+      if (selectedLanguage) params.set("language", selectedLanguage);
+      if (selectedRole) params.set("role", selectedRole);
+      if (selectedStage) params.set("stage", selectedStage);
+      if (selectedTag) params.set("tag", selectedTag);
+      if (isFavoriteOnly) params.set("isFavorite", "true");
       params.set("page", String(page));
       params.set("pageSize", String(pageSize));
       const res = await fetch(`/api/prompts?${params.toString()}`);
@@ -623,11 +647,36 @@ export default function PromptsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize]);
+  }, [debouncedSearch, selectedLanguage, selectedRole, selectedStage, selectedTag, isFavoriteOnly, page, pageSize]);
+
+  const fetchTags = useCallback(async () => {
+    try {
+      const res = await fetch("/api/prompts/tags");
+      if (!res.ok) return;
+      const tags = await res.json();
+      if (Array.isArray(tags)) setAllTags(tags);
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
 
   useEffect(() => {
     fetchPrompts();
   }, [fetchPrompts]);
+
+  useEffect(() => {
+    fetchTags();
+  }, [fetchTags]);
+
+  const clearFilters = () => {
+    setSelectedLanguage("");
+    setSelectedRole("");
+    setSelectedStage("");
+    setSelectedTag("");
+    setIsFavoriteOnly(false);
+    setSearch("");
+    setDebouncedSearch("");
+  };
 
   const handleToggleFavorite = useCallback(async (id: string, favorite: boolean) => {
     setPrompts((prev) =>
@@ -730,96 +779,170 @@ export default function PromptsPage() {
         </div>
       </div>
 
-      {prompts.length > 0 && (
-        <div
-          className="flex items-center gap-3 mb-4 pb-3"
-          style={{ borderBottom: "1px solid var(--border-default)" }}
-        >
-          <Button variant="outline" size="sm" onClick={selectAll}>
-            {selected.size === prompts.length ? "取消全选" : "全选"}
-          </Button>
-          <span className="text-sm text-[var(--text-muted)]">
-            已选择 <span className="font-semibold text-[var(--accent)]">{selected.size}</span> / {prompts.length}
-          </span>
-        </div>
-      )}
-
-      {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <div className="relative w-10 h-10">
-            <div className="absolute inset-0 rounded-full border-2 border-[var(--border-default)]" />
-            <div className="absolute inset-0 rounded-full border-2 border-transparent" style={{ borderTopColor: "var(--accent)", animation: "spin 0.8s linear infinite" }} />
-            <div className="absolute inset-1 rounded-full border-2 border-transparent" style={{ borderBottomColor: "var(--accent-hover)", animation: "spin 1.2s linear infinite reverse" }} />
-          </div>
-        </div>
-      ) : prompts.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 text-center">
-          <div className="h-20 w-20 rounded-3xl flex items-center justify-center mb-5" style={{ background: "var(--accent-subtle)", border: "1px solid var(--border-default)" }}>
-            <svg className="h-9 w-9" style={{ color: "var(--accent)" }} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
-          </div>
-          <h3 className="text-lg font-bold text-[var(--text-secondary)] mb-1">还没有提示词</h3>
-          <p className="text-sm text-[var(--text-muted)] mb-5">开始创建你的第一个提示词吧</p>
-          <Button onClick={() => setShowCreate(true)}>
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
-            创建提示词
-          </Button>
-        </div>
-      ) : (
-        <>
+      <div className="flex gap-6">
+        <aside className="hidden lg:block w-56 flex-shrink-0">
           <div
-            className={cn(
-              viewMode === "grid"
-                ? "grid grid-cols-1 md:grid-cols-2 gap-4"
-                : "space-y-3"
-            )}
+            className="sticky top-20 glass-sidebar rounded-2xl p-4"
+            style={{ backdropFilter: "blur(20px)" }}
           >
-            {prompts.map((prompt) => (
-              <div key={prompt.id} className="relative group">
-                {selected.size > 0 && (
-                  <input
-                    type="checkbox"
-                    checked={selected.has(prompt.id)}
-                    onChange={() => toggleSelect(prompt.id)}
-                    className="absolute left-3 top-3 z-10 h-4 w-4 rounded border-[var(--border-strong)] text-[var(--accent)] focus:ring-[var(--accent)]/40 cursor-pointer"
-                  />
-                )}
-                <div className={cn(selected.has(prompt.id) && "ml-6")}>
-                  <PromptCard
-                    prompt={prompt}
-                    onToggleFavorite={handleToggleFavorite}
-                    onDelete={handleDelete}
-                    compact={viewMode === "list"}
-                  />
-                </div>
-              </div>
-            ))}
+            <FilterPanel
+              selectedLanguage={selectedLanguage}
+              selectedRole={selectedRole}
+              selectedStage={selectedStage}
+              selectedTag={selectedTag}
+              onLanguageChange={(v) => { setSelectedLanguage(v); setPage(1); }}
+              onRoleChange={(v) => { setSelectedRole(v); setPage(1); }}
+              onStageChange={(v) => { setSelectedStage(v); setPage(1); }}
+              onTagChange={(v) => { setSelectedTag(v); setPage(1); }}
+              allTags={allTags}
+              isFavoriteOnly={isFavoriteOnly}
+              onFavoriteChange={(v) => { setIsFavoriteOnly(v); setPage(1); }}
+              onClear={clearFilters}
+            />
+          </div>
+        </aside>
+
+        <div className="flex-1 min-w-0">
+          <div className="mb-5">
+            <SearchBar
+              value={search}
+              onChange={setSearch}
+              placeholder="搜索提示词标题、内容、标签..."
+            />
           </div>
 
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-3 mt-8">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page <= 1}
-              >
-                上一页
+          {prompts.length > 0 && (
+            <div
+              className="flex items-center gap-3 mb-4 pb-3"
+              style={{ borderBottom: "1px solid var(--border-default)" }}
+            >
+              <Button variant="outline" size="sm" onClick={selectAll}>
+                {selected.size === prompts.length ? "取消全选" : "全选"}
               </Button>
-              <span className="text-sm text-[var(--text-tertiary)]">
-                第 <span className="font-semibold text-[var(--text-secondary)]">{page}</span> / {totalPages} 页，共 {total} 个
+              <span className="text-sm text-[var(--text-muted)]">
+                已选择 <span className="font-semibold text-[var(--accent)]">{selected.size}</span> / {prompts.length}
               </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page >= totalPages}
-              >
-                下一页
-              </Button>
             </div>
           )}
-        </>
-      )}
+
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <div className="flex flex-col items-center gap-4">
+                <div className="relative w-10 h-10">
+                  <div className="absolute inset-0 rounded-full border-2 border-[var(--border-default)]" />
+                  <div
+                    className="absolute inset-0 rounded-full border-2 border-transparent"
+                    style={{
+                      borderTopColor: "var(--accent)",
+                      animation: "spin 0.8s linear infinite",
+                    }}
+                  />
+                  <div
+                    className="absolute inset-1 rounded-full border-2 border-transparent"
+                    style={{
+                      borderBottomColor: "var(--accent-hover)",
+                      animation: "spin 1.2s linear infinite reverse",
+                    }}
+                  />
+                </div>
+                <p className="text-sm text-[var(--text-tertiary)]">加载中...</p>
+              </div>
+            </div>
+          ) : prompts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-24 text-center animate-fade-in">
+              <div
+                className="h-20 w-20 rounded-3xl flex items-center justify-center mb-5"
+                style={{
+                  background: "var(--accent-subtle)",
+                  border: "1px solid var(--border-default)",
+                }}
+              >
+                <svg className="h-9 w-9" style={{ color: "var(--accent)" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
+                </svg>
+              </div>
+              <h3 className="text-lg font-bold text-[var(--text-secondary)] mb-1">
+                {search || selectedLanguage || selectedRole || selectedStage || selectedTag
+                  ? "没有找到匹配的提示词"
+                  : "还没有提示词"}
+              </h3>
+              <p className="text-sm text-[var(--text-muted)] mb-5">
+                {search || selectedLanguage || selectedRole || selectedStage || selectedTag
+                  ? "试试调整搜索条件"
+                  : "开始创建你的第一个提示词吧"}
+              </p>
+              {!search && !selectedLanguage && !selectedRole && !selectedStage && !selectedTag && (
+                <Button onClick={() => setShowCreate(true)}>
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
+                  创建提示词
+                </Button>
+              )}
+            </div>
+          ) : (
+            <>
+              <div
+                className={cn(
+                  viewMode === "grid"
+                    ? "grid grid-cols-1 md:grid-cols-2 gap-4"
+                    : "space-y-3"
+                )}
+              >
+                {prompts.map((prompt, index) => (
+                  <div
+                    key={prompt.id}
+                    style={{ animationDelay: `${index * 0.03}s` }}
+                    className={cn(
+                      "relative group opacity-0 animate-fade-in",
+                      `stagger-${Math.min(index + 1, 8)}`
+                    )}
+                  >
+                    {selected.size > 0 && (
+                      <input
+                        type="checkbox"
+                        checked={selected.has(prompt.id)}
+                        onChange={() => toggleSelect(prompt.id)}
+                        className="absolute left-3 top-3 z-10 h-4 w-4 rounded border-[var(--border-strong)] text-[var(--accent)] focus:ring-[var(--accent)]/40 cursor-pointer"
+                      />
+                    )}
+                    <div className={cn(selected.has(prompt.id) && "ml-6")}>
+                      <PromptCard
+                        prompt={prompt}
+                        onToggleFavorite={handleToggleFavorite}
+                        onDelete={handleDelete}
+                        compact={viewMode === "list"}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-3 mt-8">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page <= 1}
+                  >
+                    上一页
+                  </Button>
+                  <span className="text-sm text-[var(--text-tertiary)] px-2">
+                    第 <span className="font-semibold text-[var(--text-secondary)]">{page}</span> / {totalPages} 页，共 {total} 个
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page >= totalPages}
+                  >
+                    下一页
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
 
       <CreatePromptDialog
         open={showCreate}

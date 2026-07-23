@@ -53,7 +53,7 @@ export interface ProjectStage {
   order: number;
   promptIds: string[];
   primaryPromptId: string | null;
-  prompt?: Prompt;
+  prompts?: Prompt[];
 }
 
 export interface Workspace {

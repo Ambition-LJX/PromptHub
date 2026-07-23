@@ -111,6 +111,28 @@ export function WorkspaceCard({ workspace, onDelete, onDownload, onExport }: Wor
     }
   };
 
+  const removePromptFromWorkspace = async (promptId: string) => {
+    if (!fullWorkspace) return;
+    const newPromptIds = fullWorkspace.prompts
+      .filter((p) => p.id !== promptId)
+      .map((p) => p.id);
+    
+    try {
+      await fetch(`/api/workspaces/${workspace.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ promptIds: newPromptIds }),
+      });
+      setFullWorkspace({
+        ...fullWorkspace,
+        prompts: fullWorkspace.prompts.filter((p) => p.id !== promptId),
+      });
+      setSelectedIds(newPromptIds);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const copyAllPrompts = async () => {
     if (!fullWorkspace) return;
     const text = fullWorkspace.prompts.map((p) => `【${p.title}】\n${p.content}`).join("\n\n---\n\n");
@@ -229,13 +251,13 @@ export function WorkspaceCard({ workspace, onDelete, onDownload, onExport }: Wor
                   {fullWorkspace.prompts.map((prompt) => (
                     <div
                       key={prompt.id}
-                      className="flex items-center justify-between p-3 rounded-xl border"
+                      className="flex items-center justify-between p-3 rounded-xl border group"
                       style={{
                         background: "var(--surface-card)",
                         borderColor: "var(--border-subtle)",
                       }}
                     >
-                      <div className="min-w-0 flex-1">
+                      <div className="min-w-0 flex-1 mr-2">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="font-semibold text-sm text-[var(--text-primary)]">{prompt.title}</span>
                           {prompt.language.slice(0, 1).map((l) => (
@@ -249,7 +271,18 @@ export function WorkspaceCard({ workspace, onDelete, onDownload, onExport }: Wor
                           {prompt.content.slice(0, 80)}...
                         </p>
                       </div>
-                      <CopyButton text={prompt.content} />
+                      <div className="flex items-center gap-1">
+                        <CopyButton text={prompt.content} />
+                        <button
+                          onClick={() => removePromptFromWorkspace(prompt.id)}
+                          className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500/10 text-[var(--text-muted)] hover:text-red-400"
+                          title="移除"
+                        >
+                          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/>
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>

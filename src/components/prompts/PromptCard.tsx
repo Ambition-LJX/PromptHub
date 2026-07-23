@@ -106,7 +106,7 @@ export function PromptCard({ prompt, onToggleFavorite, onDelete, compact }: Prom
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all duration-200">
+          <div className="flex items-center gap-0.5 flex-shrink-0">
             <CopyButton text={prompt.content} />
             <button
               onClick={() => onToggleFavorite?.(prompt.id, !prompt.isFavorite)}
