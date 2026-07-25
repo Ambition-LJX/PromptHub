@@ -1,0 +1,82 @@
+# ============================================================================
+# PromptHub 开发环境 Docker Compose
+#
+# 启动: docker compose -f docker-compose.dev.yml --env-file .env.docker.dev up -d --build
+# 停止: docker compose -f docker-compose.dev.yml --env-file .env.docker.dev down
+# 日志: docker compose -f docker-compose.dev.yml logs -f app
+#
+# 隔离说明:
+#   - MySQL 仅通过 expose 暴露给内部网络，不映射宿主机端口（避免端口冲突）
+#   - 应用通过 8081 端口对外暴露
+#   - 使用独立的容器名 / 网络 / 数据卷，与其它项目互不干扰
+# ============================================================================
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: prompthub-dev-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      TZ: Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-authentication-plugin=caching_sha2_password
+      - --skip-name-resolve
+      # 表名不区分大小写：Prisma 迁移中存在大小写混用，Linux 默认大小写敏感会导致迁移失败
+      - --lower_case_table_names=1
+    expose:
+      # 仅对本 compose 网络内部开放，不映射到宿主机
+      - "3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - prompthub-dev-net
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: prompthub-dev-app
+    container_name: prompthub-dev-app
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      # compose 内部通过服务名 mysql 连接，密码来自 env 文件
+      DATABASE_URL: "mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mysql:3306/${MYSQL_DATABASE}"
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
+      NODE_ENV: production
+      TZ: Asia/Shanghai
+      RUN_SEED: ${RUN_SEED}
+      # ---------- OAuth 第三方登录 ----------
+      OAUTH_CALLBACK_BASE_URL: ${OAUTH_CALLBACK_BASE_URL}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET}
+      OAUTH_INSECURE_COOKIE: ${OAUTH_INSECURE_COOKIE}
+    ports:
+      # 对外暴露 8081 → 容器内 3000
+      - "${APP_PORT:-8081}:3000"
+    networks:
+      - prompthub-dev-net
+
+volumes:
+  mysql_data:
+    name: prompthub-dev-mysql-data
+
+networks:
+  prompthub-dev-net:
+    name: prompthub-dev-net
+    driver: bridge
