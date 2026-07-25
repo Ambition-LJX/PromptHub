@@ -9,11 +9,10 @@ build/
 # Production
 dist/
 
-# Environment variables
+# Environment variables (模板 .env.example 可提交，其余忽略)
 .env
 .env.local
 .env.*.local
-.env.docker
 .env.docker.prod
 
 # Debug logs
