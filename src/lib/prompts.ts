@@ -16,7 +16,7 @@ function toPrompt(raw: {
   createdAt: Date;
   updatedAt: Date;
   userId: string;
-  visibility: string;
+  visibility: "PRIVATE" | "TEAM" | "SHARED";
 }): Prompt {
   return {
     id: raw.id,
@@ -29,6 +29,8 @@ function toPrompt(raw: {
     tags: parseJsonArray(raw.tags),
     isFavorite: raw.isFavorite,
     versions: parseJsonArray(raw.versions) as unknown as PromptVersion[],
+    visibility: raw.visibility,
+    userId: raw.userId,
     createdAt: raw.createdAt.toISOString(),
     updatedAt: raw.updatedAt.toISOString(),
   };

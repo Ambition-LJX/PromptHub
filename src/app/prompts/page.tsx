@@ -689,6 +689,17 @@ export default function PromptsPage() {
     });
   }, []);
 
+  const handleVisibilityChange = useCallback(async (id: string, visibility: "PRIVATE" | "TEAM" | "SHARED") => {
+    setPrompts((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, visibility } : p))
+    );
+    await fetch(`/api/prompts/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ visibility }),
+    });
+  }, []);
+
   const handleDelete = async (id: string) => {
     if (!confirm("确定要删除这个提示词吗？")) return;
     await fetch(`/api/prompts/${id}`, { method: "DELETE" });
@@ -909,6 +920,7 @@ export default function PromptsPage() {
                         prompt={prompt}
                         onToggleFavorite={handleToggleFavorite}
                         onDelete={handleDelete}
+                        onVisibilityChange={handleVisibilityChange}
                         compact={viewMode === "list"}
                       />
                     </div>

@@ -9,8 +9,8 @@ export interface Prompt {
   tags: string[];
   isFavorite: boolean;
   versions: PromptVersion[];
-  visibility?: string;
-  userId?: string;
+  visibility: "PRIVATE" | "TEAM" | "SHARED";
+  userId: string;
   createdAt: string;
   updatedAt: string;
 }

@@ -13,15 +13,18 @@ import {
 import { CopyButton } from "@/components/common/CopyButton";
 import { cn, highlightVariables } from "@/lib/utils";
 import type { Prompt } from "@/types";
+import { Check } from "lucide-react";
 
 interface PromptCardProps {
   prompt: Prompt;
   onToggleFavorite?: (id: string, favorite: boolean) => void;
   onDelete?: (id: string) => void;
+  onVisibilityChange?: (id: string, visibility: "PRIVATE" | "TEAM" | "SHARED") => void;
   compact?: boolean;
+  isOwner?: boolean;
 }
 
-export function PromptCard({ prompt, onToggleFavorite, onDelete, compact }: PromptCardProps) {
+export function PromptCard({ prompt, onToggleFavorite, onDelete, onVisibilityChange, compact, isOwner = true }: PromptCardProps) {
   const [expanded, setExpanded] = useState(false);
   const contentPreview = prompt.content.length > 160
     ? prompt.content.slice(0, 160) + "..."
@@ -61,6 +64,18 @@ export function PromptCard({ prompt, onToggleFavorite, onDelete, compact }: Prom
               >
                 {prompt.title}
               </Link>
+              {/* Visibility Badge */}
+              <span className={cn(
+                "flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium flex-shrink-0",
+                prompt.visibility === "PRIVATE" && "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400",
+                prompt.visibility === "TEAM" && "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400",
+                prompt.visibility === "SHARED" && "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400"
+              )}>
+                {prompt.visibility === "PRIVATE" && <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>}
+                {prompt.visibility === "TEAM" && <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>}
+                {prompt.visibility === "SHARED" && <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>}
+                {prompt.visibility === "PRIVATE" ? "私有" : prompt.visibility === "TEAM" ? "团队" : "公开"}
+              </span>
             </div>
 
             {/* Description */}
@@ -120,18 +135,62 @@ export function PromptCard({ prompt, onToggleFavorite, onDelete, compact }: Prom
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="12" cy="19" r="1" fill="currentColor"/></svg>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" className="min-w-[140px]">
+                {/* Visibility Selection - Only show for owner */}
+                {isOwner && (
+                  <>
+                    <div className="px-2 py-1.5 text-xs font-bold text-[var(--text-tertiary)] uppercase tracking-wider">
+                      可见性
+                    </div>
+                    <DropdownMenuItem
+                      onSelect={(e) => { e.preventDefault(); onVisibilityChange?.(prompt.id, "PRIVATE"); }}
+                      className={cn(
+                        "flex items-center gap-2 cursor-pointer",
+                        prompt.visibility === "PRIVATE" && "bg-[var(--accent-subtle)] text-[var(--accent)]"
+                      )}
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                      私有
+                      {prompt.visibility === "PRIVATE" && <Check className="h-4 w-4 ml-auto" />}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onSelect={(e) => { e.preventDefault(); onVisibilityChange?.(prompt.id, "TEAM"); }}
+                      className={cn(
+                        "flex items-center gap-2 cursor-pointer",
+                        prompt.visibility === "TEAM" && "bg-[var(--accent-subtle)] text-[var(--accent)]"
+                      )}
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                      团队可见
+                      {prompt.visibility === "TEAM" && <Check className="h-4 w-4 ml-auto" />}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onSelect={(e) => { e.preventDefault(); onVisibilityChange?.(prompt.id, "SHARED"); }}
+                      className={cn(
+                        "flex items-center gap-2 cursor-pointer",
+                        prompt.visibility === "SHARED" && "bg-[var(--accent-subtle)] text-[var(--accent)]"
+                      )}
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                      公开共享
+                      {prompt.visibility === "SHARED" && <Check className="h-4 w-4 ml-auto" />}
+                    </DropdownMenuItem>
+                    <div className="h-px bg-[var(--border-default)] my-1" />
+                  </>
+                )}
                 <DropdownMenuItem asChild>
                   <Link href={`/prompts/${prompt.id}`} className="flex items-center gap-2">
                     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg> 编辑
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="flex items-center gap-2 focus:text-red-400"
-                  onClick={() => onDelete?.(prompt.id)}
-                >
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg> 删除
-                </DropdownMenuItem>
+                {isOwner && (
+                  <DropdownMenuItem
+                    className="flex items-center gap-2 focus:text-red-400"
+                    onClick={() => onDelete?.(prompt.id)}
+                  >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg> 删除
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

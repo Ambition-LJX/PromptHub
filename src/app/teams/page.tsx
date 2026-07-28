@@ -233,32 +233,37 @@ export default function TeamsPage() {
 
       {/* Create Team Dialog */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent className="sm:max-w-md">
-          <div className="relative overflow-hidden">
+        <DialogContent className="sm:max-w-lg p-0 overflow-hidden">
+          {/* Gradient Top Bar */}
+          <div className="h-1.5 w-full bg-gradient-to-r from-[var(--accent)] via-[var(--accent-secondary,var(--accent))] to-[var(--accent)]" />
+          
+          <div className="relative p-6 sm:p-8">
             {/* Decorative Background */}
-            <div className="absolute -top-20 -right-20 w-40 h-40 rounded-full opacity-20 blur-3xl" style={{ background: "var(--accent)" }} />
-            <div className="absolute -bottom-10 -left-10 w-32 h-32 rounded-full opacity-10 blur-2xl" style={{ background: "var(--accent-secondary, var(--accent))" }} />
+            <div className="absolute -top-24 -right-24 w-56 h-56 rounded-full opacity-10 blur-3xl pointer-events-none" style={{ background: "var(--accent)" }} />
+            <div className="absolute -bottom-16 -left-16 w-44 h-44 rounded-full opacity-5 blur-3xl pointer-events-none" style={{ background: "var(--accent-secondary, var(--accent))" }} />
             
-            <DialogHeader className="relative">
-              <div className="flex items-center gap-3 mb-2">
+            <DialogHeader className="relative mb-6">
+              <div className="flex items-center gap-4 mb-3">
                 <div 
-                  className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg"
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg shadow-[var(--accent)]/20"
                   style={{ background: "linear-gradient(135deg, var(--accent), var(--accent-hover, var(--accent)))" }}
                 >
-                  <Users className="h-6 w-6 text-white" />
+                  <Users className="h-7 w-7 text-white" />
                 </div>
                 <div>
-                  <DialogTitle className="text-xl">创建团队</DialogTitle>
-                  <p className="text-xs text-[var(--text-tertiary)]">建立新团队，开始协作之旅</p>
+                  <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-[var(--accent)] to-[var(--accent-secondary,var(--accent))] bg-clip-text text-transparent">
+                    创建团队
+                  </DialogTitle>
+                  <p className="text-sm text-[var(--text-muted)] mt-0.5">建立新团队，开始协作之旅</p>
                 </div>
               </div>
             </DialogHeader>
           </div>
           
-          <div className="space-y-5 py-4 relative">
+          <div className="px-6 sm:px-8 pb-2 relative -mt-2">
             {/* Team Name Input */}
-            <div className="group">
-              <label className="text-sm font-semibold text-[var(--text-secondary)] mb-2 flex items-center gap-2">
+            <div className="group mb-5">
+              <label className="text-sm font-semibold text-[var(--text-secondary)] mb-2.5 flex items-center gap-2">
                 团队名称
                 <span className="text-red-400">*</span>
               </label>
@@ -267,31 +272,41 @@ export default function TeamsPage() {
                   value={createForm.name}
                   onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
                   placeholder="例如：前端开发组"
+                  maxLength={30}
                   className={cn(
-                    "h-12 pl-11 pr-4 rounded-xl transition-all duration-200",
-                    "border-2 focus:border-[var(--accent)]",
-                    "bg-[var(--surface-glass)]",
-                    createForm.name && "border-[var(--accent)]/50"
+                    "h-12 pl-12 pr-4 rounded-xl transition-all duration-300",
+                    "border-2 border-[var(--border-default)]",
+                    "focus:border-[var(--accent)] focus:ring-4 focus:ring-[var(--accent)]/10 focus:shadow-lg focus:shadow-[var(--accent)]/10",
+                    "bg-[var(--surface-glass)] backdrop-blur-sm",
+                    "placeholder:text-[var(--text-muted)]",
+                    createForm.name && "border-[var(--accent)]/40 bg-[var(--accent)]/5"
                   )}
                 />
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none transition-all duration-300">
                   <Users className={cn(
-                    "h-4 w-4 transition-colors duration-200",
-                    createForm.name ? "text-[var(--accent)]" : "text-[var(--text-muted)]"
+                    "h-5 w-5 transition-all duration-300",
+                    createForm.name ? "text-[var(--accent)] scale-110" : "text-[var(--text-muted)]"
                   )} />
                 </div>
               </div>
               {createForm.name && (
-                <p className="text-xs text-[var(--text-tertiary)] mt-1.5 flex items-center gap-1">
-                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-400" />
-                  {createForm.name.length}/30 字符
-                </p>
+                <div className="mt-2 flex items-center justify-between">
+                  <p className="text-xs text-[var(--text-tertiary)] flex items-center gap-1.5">
+                    <span className="inline-flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                      名称可用
+                    </span>
+                  </p>
+                  <p className="text-xs text-[var(--text-muted)]">
+                    {createForm.name.length}/30 字符
+                  </p>
+                </div>
               )}
             </div>
             
             {/* Description Input */}
-            <div className="group">
-              <label className="text-sm font-semibold text-[var(--text-secondary)] mb-2 flex items-center gap-2">
+            <div className="group mb-6">
+              <label className="text-sm font-semibold text-[var(--text-secondary)] mb-2.5 flex items-center gap-2">
                 团队描述
                 <span className="text-xs text-[var(--text-muted)] font-normal">(可选)</span>
               </label>
@@ -300,31 +315,38 @@ export default function TeamsPage() {
                   value={createForm.description}
                   onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
                   placeholder="简单描述一下团队的职能和目标..."
+                  maxLength={200}
+                  rows={3}
                   className={cn(
-                    "min-h-[100px] pl-11 pr-4 pt-3 rounded-xl resize-none transition-all duration-200",
-                    "border-2 focus:border-[var(--accent)]",
-                    "bg-[var(--surface-glass)]",
-                    createForm.description && "border-[var(--accent)]/50"
+                    "pl-12 pr-4 pt-3 rounded-xl resize-none transition-all duration-300",
+                    "border-2 border-[var(--border-default)]",
+                    "focus:border-[var(--accent)] focus:ring-4 focus:ring-[var(--accent)]/10 focus:shadow-lg focus:shadow-[var(--accent)]/10",
+                    "bg-[var(--surface-glass)] backdrop-blur-sm",
+                    "placeholder:text-[var(--text-muted)]",
+                    createForm.description && "border-[var(--accent)]/40 bg-[var(--accent)]/5"
                   )}
                 />
-                <div className="absolute left-4 top-3 pointer-events-none">
+                <div className="absolute left-4 top-3 pointer-events-none transition-all duration-300">
                   <Shield className={cn(
-                    "h-4 w-4 transition-colors duration-200",
-                    createForm.description ? "text-[var(--accent)]" : "text-[var(--text-muted)]"
+                    "h-5 w-5 transition-all duration-300",
+                    createForm.description ? "text-[var(--accent)] scale-110" : "text-[var(--text-muted)]"
                   )} />
                 </div>
               </div>
               {createForm.description && (
-                <p className="text-xs text-[var(--text-tertiary)] mt-1.5">
+                <p className="text-xs text-[var(--text-muted)] mt-2 text-right">
                   {createForm.description.length}/200 字符
                 </p>
               )}
             </div>
 
             {/* Quick Templates */}
-            <div>
-              <p className="text-xs text-[var(--text-muted)] mb-2">快速模板</p>
-              <div className="flex flex-wrap gap-2">
+            <div className="mb-6">
+              <div className="flex items-center gap-2 mb-3">
+                <p className="text-xs text-[var(--text-muted)] font-medium">快速模板</p>
+                <div className="flex-1 h-px bg-gradient-to-r from-[var(--border-default)] to-transparent" />
+              </div>
+              <div className="grid grid-cols-2 gap-2.5">
                 {[
                   { name: "前端开发", icon: "💻", desc: "前端团队" },
                   { name: "后端开发", icon: "⚙️", desc: "后端团队" },
@@ -339,56 +361,83 @@ export default function TeamsPage() {
                       description: createForm.description || template.desc
                     })}
                     className={cn(
-                      "px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200",
-                      "border border-[var(--border-default)]",
+                      "group relative px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 overflow-hidden",
+                      "border-2 border-[var(--border-default)]",
                       "hover:border-[var(--accent)] hover:bg-[var(--accent)]/5",
-                      "text-[var(--text-secondary)]"
+                      "hover:shadow-md hover:shadow-[var(--accent)]/10",
+                      "text-[var(--text-secondary)]",
+                      "hover:text-[var(--text-primary)]"
                     )}
                   >
-                    {template.icon} {template.name}
+                    {/* Hover Background */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-[var(--accent)]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    
+                    <div className="relative flex items-center gap-3">
+                      <span className="text-xl group-hover:scale-110 transition-transform duration-300">{template.icon}</span>
+                      <div className="text-left">
+                        <div className="font-semibold">{template.name}</div>
+                        <div className="text-xs text-[var(--text-muted)] group-hover:text-[var(--text-tertiary)] transition-colors">{template.desc}</div>
+                      </div>
+                    </div>
                   </button>
                 ))}
               </div>
             </div>
           </div>
           
-          <DialogFooter className="gap-2 sm:gap-0 pt-2">
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setShowCreate(false);
-                setCreateForm({ name: "", description: "" });
-              }}
-              className="h-10 px-6 rounded-xl"
-            >
-              取消
-            </Button>
-            <Button 
-              onClick={handleCreateTeam} 
-              disabled={!createForm.name.trim() || creating}
-              className={cn(
-                "h-10 px-8 rounded-xl font-semibold transition-all duration-200",
-                "bg-gradient-to-r from-[var(--accent)] to-[var(--accent-hover,var(--accent))]",
-                "hover:shadow-lg hover:shadow-[var(--accent)]/25",
-                "disabled:opacity-50 disabled:cursor-not-allowed"
-              )}
-            >
-              {creating ? (
-                <span className="flex items-center gap-2">
-                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  创建中...
+          <div className="px-6 sm:px-8 pb-6 sm:pb-8 pt-4 relative">
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--border-default)] to-transparent" />
+            
+            <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setShowCreate(false);
+                  setCreateForm({ name: "", description: "" });
+                }}
+                className={cn(
+                  "h-11 px-6 rounded-xl font-medium",
+                  "border-2 border-[var(--border-default)]",
+                  "hover:border-[var(--text-muted)] hover:bg-[var(--surface-elevated)]",
+                  "transition-all duration-300"
+                )}
+              >
+                取消
+              </Button>
+              <Button 
+                onClick={handleCreateTeam} 
+                disabled={!createForm.name.trim() || creating}
+                className={cn(
+                  "h-11 px-8 rounded-xl font-semibold transition-all duration-300",
+                  "bg-gradient-to-r from-[var(--accent)] to-[var(--accent-hover,var(--accent))]",
+                  "hover:shadow-xl hover:shadow-[var(--accent)]/30 hover:-translate-y-0.5",
+                  "active:translate-y-0 active:shadow-lg",
+                  "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none",
+                  "relative overflow-hidden group"
+                )}
+              >
+                {/* Button Shine Effect */}
+                <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+                
+                <span className="relative flex items-center gap-2">
+                  {creating ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      创建中...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4 group-hover:rotate-90 transition-transform duration-300" />
+                      创建团队
+                    </>
+                  )}
                 </span>
-              ) : (
-                <span className="flex items-center gap-2">
-                  <Plus className="h-4 w-4" />
-                  创建团队
-                </span>
-              )}
-            </Button>
-          </DialogFooter>
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
