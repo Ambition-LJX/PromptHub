@@ -19,6 +19,16 @@ const navItems = [
     ),
   },
   {
+    href: "/explore",
+    label: "探索",
+    icon: (
+      <svg className="h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      </svg>
+    ),
+    highlight: true,
+  },
+  {
     href: "/prompts",
     label: "管理",
     icon: (
@@ -153,16 +163,23 @@ export function Header() {
                 >
                   {item.icon}
                   <span className="hidden md:inline">{item.label}</span>
-                  {isActive && (
+                  {(isActive || item.highlight) && (
                     <span className="absolute inset-0 rounded-lg" style={{
-                      background: "var(--accent-subtle)",
-                      border: "1px solid var(--border-default)",
+                      background: item.highlight && !isActive ? "rgba(52, 211, 153, 0.1)" : "var(--accent-subtle)",
+                      border: "1px solid",
+                      borderColor: item.highlight && !isActive ? "rgba(52, 211, 153, 0.3)" : "var(--border-default)",
                     }} />
                   )}
                   {isActive && (
                     <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full" style={{
                       background: "linear-gradient(90deg, var(--accent), var(--accent-hover))",
                     }} />
+                  )}
+                  {item.highlight && !isActive && (
+                    <span
+                      className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full animate-pulse"
+                      style={{ background: "#34d399" }}
+                    />
                   )}
                 </Link>
               );
